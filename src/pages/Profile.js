@@ -95,7 +95,9 @@ export default function Profile() {
       )}
       <div className="profile-layout">
         <aside className="panel profile-card">
-          <div className="profile-avatar">{employee.name.split(' ').map((word) => word[0]).join('').slice(0, 2)}</div>
+          {employee.profilePhoto
+            ? <img className="profile-avatar profile-avatar-image" src={employee.profilePhoto} alt={`${employee.name} profile`} />
+            : <div className="profile-avatar">{employee.name.split(' ').map((word) => word[0]).join('').slice(0, 2)}</div>}
           <h2>{employee.name}</h2><p>{employee.role}</p>
           <span className={`status ${employee.status.toLowerCase().replace(' ', '-')}`}>{employee.status}</span>
           <div className="profile-meta"><span><FiMail /> {employee.email}</span><span><FiPhone /> {employee.phone}</span><span><FiMapPin /> Bengaluru, India</span></div>

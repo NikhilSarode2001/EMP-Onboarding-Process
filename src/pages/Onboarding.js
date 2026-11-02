@@ -5,7 +5,7 @@ import { FiBriefcase, FiCheck, FiFileText, FiHome, FiPhone, FiUser } from 'react
 import { addEmployee, updateEmployee } from '../features/employees/employeesSlice';
 
 const emptyForm = {
-  name: '', email: '', phone: '', dateOfBirth: '', gender: '', maritalStatus: '',
+  name: '', email: '', phone: '', profilePhoto: '', dateOfBirth: '', gender: '', maritalStatus: '',
   nationality: '', currentAddress: '', city: '', state: '', pinCode: '',
   emergencyName: '', emergencyRelation: '', emergencyPhone: '',
   highestQualification: '', university: '', yearOfPassing: '', experience: '',
@@ -29,6 +29,36 @@ export default function Onboarding() {
   const update = (event) => {
     setForm({ ...form, [event.target.name]: event.target.value });
     setErrors({ ...errors, [event.target.name]: '' });
+  };
+
+  const updateProfilePhoto = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setErrors({ ...errors, profilePhoto: 'Please select an image file' });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors({ ...errors, profilePhoto: 'Photo must be smaller than 5 MB' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 400;
+        const scale = Math.min(size / image.width, size / image.height, 1);
+        canvas.width = Math.round(image.width * scale);
+        canvas.height = Math.round(image.height * scale);
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        setForm({ ...form, profilePhoto: canvas.toDataURL('image/jpeg', 0.82) });
+        setErrors({ ...errors, profilePhoto: '' });
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   const requiredFields = {
@@ -60,6 +90,15 @@ export default function Onboarding() {
     const employeeData = { ...form, loginEmail: user.email, reviewStatus: 'Submitted to HR', email: form.email || user.email };
     if (existingEmployee) dispatch(updateEmployee({ id: existingEmployee.id, data: employeeData }));
     else dispatch(addEmployee(employeeData));
+    const notifications = JSON.parse(localStorage.getItem('employeeEmailNotifications') || '[]');
+    notifications.unshift({
+      to: 'HR',
+      recipient: 'HR',
+      subject: 'New employee onboarding submitted',
+      message: `${employeeData.name} submitted a complete onboarding profile for HR review.`,
+      sentAt: new Date().toISOString(),
+    });
+    localStorage.setItem('employeeEmailNotifications', JSON.stringify(notifications));
     setSubmitted(true);
   };
 
@@ -110,6 +149,16 @@ export default function Onboarding() {
           <div className="onboarding-step-heading"><span>STEP {step} OF 5</span><h2>{titles[step - 1][0]}</h2><p>Fields marked with an asterisk are required.</p></div>
           <div className="form-grid">
             {step === 1 && <>
+              <div className="profile-photo-field full-field">
+                <label htmlFor="profilePhoto">Profile photo</label>
+                <div className="profile-photo-upload">
+                  {form.profilePhoto
+                    ? <img src={form.profilePhoto} alt="Profile preview" />
+                    : <span><FiUser /></span>}
+                  <div><input id="profilePhoto" name="profilePhoto" type="file" accept="image/*" onChange={updateProfilePhoto} /><small>JPG, PNG or other image formats. Maximum 5 MB.</small></div>
+                </div>
+                {errors.profilePhoto && <small className="field-error">{errors.profilePhoto}</small>}
+              </div>
               <Field label="Full name" name="name" value={form.name} update={update} error={errors.name} placeholder="Enter your full name" required />
               <Field label="Personal email" name="email" type="email" value={form.email} update={update} error={errors.email} placeholder="name@email.com" required />
               <Field label="Mobile number" name="phone" value={form.phone} update={update} error={errors.phone} placeholder="+91 98765 43210" required />

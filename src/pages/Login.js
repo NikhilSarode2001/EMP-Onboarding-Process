@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FiBriefcase, FiLock, FiMail } from 'react-icons/fi';
@@ -8,6 +9,8 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const error = useSelector((state) => state.auth.error);
+  const [accountType, setAccountType] = useState('employee');
+  const [companyRole, setCompanyRole] = useState('hr');
 
   const submit = (event) => {
     event.preventDefault();
@@ -18,15 +21,19 @@ export default function Login() {
       dispatch(loginFailed('Please enter your email and password.'));
       return;
     }
-    const type = data.get('userType') || 'hr';
+    const type = accountType === 'employee' ? 'employee' : companyRole;
+    const displayRole = type === 'admin' ? 'Admin Login' : type === 'hr' ? 'HR Login' : 'Employee';
+    const roleConfig = {
+      hr: { name: 'HR Manager', role: 'HR Manager', permissions: ['view-employees', 'review-onboarding', 'manage-documents'] },
+      admin: { name: 'System Admin', role: 'Administrator', permissions: ['manage-users', 'view-employees', 'review-onboarding', 'manage-documents', 'manage-settings'] },
+      employee: { name: 'New Employee', role: 'Employee', permissions: ['complete-onboarding', 'upload-documents', 'view-profile'] },
+    }[type];
     dispatch(login({
-      name: type === 'employee' ? 'New Employee' : 'HR Manager',
+      name: companyRole.name,
       email,
-      role: type === 'employee' ? 'Employee' : 'HR Manager',
+      role: displayRole,
       type,
-      permissions: type === 'hr'
-        ? ['view-employees', 'review-onboarding', 'manage-documents']
-        : ['complete-onboarding', 'upload-documents', 'view-profile'],
+      permissions: roleConfig.permissions,
     }));
     navigate(location.state?.from?.pathname || '/', { replace: true });
   };
@@ -34,7 +41,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-panel">
-        <div className="login-brand"><span><FiBriefcase /></span><strong>Onboarding Process</strong></div>
+        <div className="login-brand"><span><FiBriefcase /></span><strong>Emp Onboarding Process</strong></div>
         <h1>Welcome back</h1>
         <p>Sign in to manage your employee onboarding workspace.</p>
         <form onSubmit={submit}>
@@ -45,9 +52,18 @@ export default function Login() {
           <div className="input-icon"><FiLock /><input name="password" type="password" placeholder="Enter your password" /></div>
           <label>Sign in as</label>
           <div className="role-options">
-            <label><input type="radio" name="userType" value="employee" /> Employee</label>
-            <label><input type="radio" name="userType" value="hr" defaultChecked /> HR user</label>
+            <label><input type="radio" name="accountType" value="employee" checked={accountType === 'employee'} onChange={() => setAccountType('employee')} /> Employee</label>
+            <label><input type="radio" name="accountType" value="company" checked={accountType === 'company'} onChange={() => setAccountType('company')} /> Company users</label>
           </div>
+          {accountType === 'company' && (
+            <>
+              <label>Company login</label>
+              <div className="role-options">
+                <label><input type="radio" name="companyRole" value="hr" checked={companyRole === 'hr'} onChange={() => setCompanyRole('hr')} /> HR Login</label>
+                <label><input type="radio" name="companyRole" value="admin" checked={companyRole === 'admin'} onChange={() => setCompanyRole('admin')} /> Admin Login</label>
+              </div>
+            </>
+          )}
           <button className="primary-button login-button" type="submit">Sign in</button>
         </form>
         <small>Demo portal: use any valid email and password.</small>
